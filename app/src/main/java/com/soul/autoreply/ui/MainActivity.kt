@@ -121,10 +121,11 @@ class MainActivity : AppCompatActivity() {
         val serviceEnabled = prefs.getBoolean("service_enabled", false)
         val hasApiKey = AutoReplyApi.hasApiKey(this)
         val model = AutoReplyApi.getCurrentModel(this)
+        val style = AutoReplyApi.getCurrentStyle(this)
 
         binding.tvAccessibilityStatus.text = if (accessibilityEnabled) "✅ 已开启" else "❌ 未开启"
         binding.tvServiceStatus.text = if (serviceEnabled) "✅ 运行中" else "⏸️ 已停止"
-        binding.tvApiKeyStatus.text = if (hasApiKey) "✅ ${model.displayName}" else "❌ 未配置"
+        binding.tvApiKeyStatus.text = if (hasApiKey) "✅ ${model.displayName} · ${style.name}" else "❌ 未配置"
         binding.btnToggleService.text = if (serviceEnabled) "关闭自动回复" else "开启自动回复"
         binding.btnToggleService.isEnabled = accessibilityEnabled
     }
@@ -140,10 +141,12 @@ class MainActivity : AppCompatActivity() {
     private fun showConfigDialog() {
         val currentModel = AutoReplyApi.getCurrentModel(this)
         val currentKey = AutoReplyApi.getApiKey(this)
-        val currentGroupId = AutoReplyApi.getGroupId(this)
-        val selectedIndex = AutoReplyApi.ALL_MODELS.indexOfFirst { it.id == currentModel.id }.takeIf { it >= 0 } ?: 0
+        val currentStyle = AutoReplyApi.getCurrentStyle(this)
+        val modelIndex = AutoReplyApi.ALL_MODELS.indexOfFirst { it.id == currentModel.id }.takeIf { it >= 0 } ?: 0
+        val styleIndex = AutoReplyApi.CHAT_STYLES.indexOfFirst { it.id == currentStyle.id }.takeIf { it >= 0 } ?: 0
 
         val modelNames = AutoReplyApi.ALL_MODELS.map { it.displayName }
+        val styleNames = AutoReplyApi.CHAT_STYLES.map { it.name }
 
         val container = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
@@ -171,54 +174,66 @@ class MainActivity : AppCompatActivity() {
             textSize = 12f
             setPadding(0, 24, 0, 0)
         }
-        val spinner = android.widget.Spinner(this)
-        spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, modelNames)
-        spinner.setSelection(selectedIndex)
+        val modelSpinner = android.widget.Spinner(this)
+        modelSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, modelNames)
+        modelSpinner.setSelection(modelIndex)
         container.addView(modelLabel)
-        container.addView(spinner)
+        container.addView(modelSpinner)
 
-        // GroupId (for Minimax)
-        val groupIdLabel = android.widget.TextView(this).apply {
-            text = "Group ID（Minimax模型专用，其他模型可留空）"
+        // Chat style selection
+        val styleLabel = android.widget.TextView(this).apply {
+            text = "聊天风格"
             setTextColor(0xFF888888.toInt())
             textSize = 12f
             setPadding(0, 24, 0, 0)
         }
-        val groupIdInput = android.widget.EditText(this).apply {
-            hint = "Minimax Group ID"
-            setText(currentGroupId)
-            setSingleLine()
+        val styleSpinner = android.widget.Spinner(this)
+        styleSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, styleNames)
+        styleSpinner.setSelection(styleIndex)
+        container.addView(styleLabel)
+        container.addView(styleSpinner)
+
+        // Style description
+        val styleDesc = android.widget.TextView(this).apply {
+            text = currentStyle.description
+            setTextColor(0xFF666666.toInt())
+            textSize = 11f
+            setPadding(0, 4, 0, 0)
         }
-        container.addView(groupIdLabel)
-        container.addView(groupIdInput)
+        container.addView(styleDesc)
 
         // API URL hint
         val urlHint = android.widget.TextView(this).apply {
             text = "API: ${currentModel.baseUrl}"
             setTextColor(0xFF555555.toInt())
             textSize = 10f
-            setPadding(0, 8, 0, 0)
-        }
-        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val model = AutoReplyApi.ALL_MODELS[position]
-                urlHint.text = "API: ${model.baseUrl}"
-                // Show/hide GroupId based on model type
-                val isMinimax = model.authType == AutoReplyApi.AuthType.MINIMAX
-                groupIdLabel.visibility = if (isMinimax) View.VISIBLE else View.GONE
-                groupIdInput.visibility = if (isMinimax) View.VISIBLE else View.GONE
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
+            setPadding(0, 16, 0, 0)
         }
         container.addView(urlHint)
 
+        modelSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val model = AutoReplyApi.ALL_MODELS[position]
+                urlHint.text = "API: ${model.baseUrl}"
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        styleSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val style = AutoReplyApi.CHAT_STYLES[position]
+                styleDesc.text = style.description
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
         AlertDialog.Builder(this)
-            .setTitle("配置 API")
+            .setTitle("配置")
             .setView(container)
             .setPositiveButton("保存") { _, _ ->
                 val key = keyInput.text.toString().trim()
-                val groupId = groupIdInput.text.toString().trim()
-                val model = AutoReplyApi.ALL_MODELS[spinner.selectedItemPosition]
+                val model = AutoReplyApi.ALL_MODELS[modelSpinner.selectedItemPosition]
+                val style = AutoReplyApi.CHAT_STYLES[styleSpinner.selectedItemPosition]
 
                 if (key.isEmpty()) {
                     showToast("API Key 不能为空")
@@ -227,11 +242,9 @@ class MainActivity : AppCompatActivity() {
 
                 AutoReplyApi.saveApiKey(this, key)
                 AutoReplyApi.saveModel(this, model.id)
-                if (groupId.isNotBlank()) {
-                    AutoReplyApi.saveGroupId(this, groupId)
-                }
+                AutoReplyApi.saveStyle(this, style.id)
 
-                showToast("已保存: ${model.displayName}")
+                showToast("已保存: ${model.displayName} · ${style.name}")
                 updateStatus()
             }
             .setNegativeButton("取消", null)

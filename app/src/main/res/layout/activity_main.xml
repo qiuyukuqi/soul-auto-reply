@@ -24,7 +24,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="开启后自动回复收到的消息"
+            android:text="AI 自动回复收到的消息"
             android:textColor="#888"
             android:textSize="13sp"
             android:layout_gravity="center_horizontal"
@@ -68,7 +68,7 @@
                     android:id="@+id/tvServiceStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="⏸️ 未运行"
+                    android:text="⏸️ 已停止"
                     android:textColor="#fff"
                     android:textSize="14sp"
                     android:layout_marginBottom="6dp" />
@@ -99,7 +99,7 @@
             android:id="@+id/btnConfig"
             android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:text="配置 API Key 和模型"
+            android:text="配置模型 + API Key"
             android:textColor="#fff"
             android:textSize="14sp"
             android:backgroundTint="#0f3460"
@@ -164,7 +164,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="1. 点击「配置 API」填写 Key 并选择模型\n2. 点击「开启自动回复」\n3. 在权限提示时开启「无障碍权限」\n4. 打开 Soul，正常聊天\n5. 收到消息后自动 AI 回复对方"
+                    android:text="1. 点击「配置模型 + API Key」选择模型并填写 Key\n2. 选择聊天风格\n3. 点击「开启自动回复」\n4. 在权限提示时开启「无障碍权限」\n5. 打开 Soul，正常聊天\n6. 收到消息后自动 AI 回复对方"
                     android:textColor="#ccc"
                     android:textSize="13sp"
                     android:lineSpacingExtra="4dp" />

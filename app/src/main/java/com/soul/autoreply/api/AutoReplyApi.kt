@@ -12,7 +12,48 @@ import java.nio.charset.StandardCharsets
 object AutoReplyApi {
 
     private var cachedKey: String? = null
-    private var cachedGroupId: String? = null
+
+    // Chat style/persona options
+    data class ChatStyle(val id: String, val name: String, val description: String, val systemPrompt: String)
+
+    val CHAT_STYLES = listOf(
+        ChatStyle(
+            id = "friendly",
+            name = "友善聊天",
+            description = "温暖友好，像朋友一样自然对话",
+            systemPrompt = "你是一个温暖友善的朋友，正在和好友轻松聊天。语气自然、亲切、幽默。不要过于正式，用口语化的方式回复。"
+        ),
+        ChatStyle(
+            id = "flirty",
+            name = "撩人暧昧",
+            description = "带点小暧昧，适合交友场景",
+            systemPrompt = "你是一个有魅力、会撩人的聊天高手，擅长制造心动感。语气暧昧、调皮、有趣。适当使用表情和语气词，保持神秘感和吸引力。"
+        ),
+        ChatStyle(
+            id = "cute",
+            name = "可爱萌系",
+            description = "撒娇可爱，活泼俏皮",
+            systemPrompt = "你是一个可爱撒娇系的聊天对象，说话带点萌感，喜欢用语气词和表情。语气活泼、可爱、有点小撒娇。"
+        ),
+        ChatStyle(
+            id = "mature",
+            name = "成熟稳重",
+            description = "成熟体贴，会关心人",
+            systemPrompt = "你是一个成熟稳重、有内涵的聊天对象。说话得体、体贴、关心对方。语气温和但不失幽默，给人有安全感的感觉。"
+        ),
+        ChatStyle(
+            id = "mystery",
+            name = "神秘感",
+            description = "保持神秘，让人好奇",
+            systemPrompt = "你是一个充满神秘感的人，说话不多但每句都耐人寻味。不会轻易透露自己的事，喜欢制造悬念和好奇感。回复简洁有力。"
+        ),
+        ChatStyle(
+            id = "witty",
+            name = "机智风趣",
+            description = "幽默风趣，妙语连珠",
+            systemPrompt = "你是一个幽默风趣的人，擅长开玩笑和调侃。反应敏捷、妙语连珠、善于制造轻松氛围。偶尔自嘲，但不失魅力。"
+        )
+    )
 
     // All supported models with official base URLs
     val ALL_MODELS = listOf(
@@ -59,6 +100,17 @@ object AutoReplyApi {
             .edit().putString("model", modelId).apply()
     }
 
+    fun getCurrentStyle(context: Context): ChatStyle {
+        val styleId = context.getSharedPreferences("soul_reply_prefs", Context.MODE_PRIVATE)
+            .getString("chat_style", "friendly") ?: "friendly"
+        return CHAT_STYLES.find { it.id == styleId } ?: CHAT_STYLES.first()
+    }
+
+    fun saveStyle(context: Context, styleId: String) {
+        context.getSharedPreferences("soul_reply_prefs", Context.MODE_PRIVATE)
+            .edit().putString("chat_style", styleId).apply()
+    }
+
     fun getApiKey(context: Context): String {
         if (cachedKey != null) return cachedKey!!
         return context.getSharedPreferences("soul_reply_prefs", Context.MODE_PRIVATE)
@@ -69,18 +121,6 @@ object AutoReplyApi {
         cachedKey = key
         context.getSharedPreferences("soul_reply_prefs", Context.MODE_PRIVATE)
             .edit().putString("api_key", key).apply()
-    }
-
-    fun getGroupId(context: Context): String {
-        if (cachedGroupId != null) return cachedGroupId!!
-        return context.getSharedPreferences("soul_reply_prefs", Context.MODE_PRIVATE)
-            .getString("group_id", "") ?: "".also { cachedGroupId = it }
-    }
-
-    fun saveGroupId(context: Context, groupId: String) {
-        cachedGroupId = groupId
-        context.getSharedPreferences("soul_reply_prefs", Context.MODE_PRIVATE)
-            .edit().putString("group_id", groupId).apply()
     }
 
     fun hasApiKey(context: Context): Boolean = getApiKey(context).isNotBlank()
@@ -95,7 +135,11 @@ object AutoReplyApi {
                 }
 
                 val model = getCurrentModel(context)
-                val messages = listOf(mapOf("role" to "user", "content" to message))
+                val style = getCurrentStyle(context)
+                val messages = listOf(
+                    mapOf("role" to "system", "content" to style.systemPrompt),
+                    mapOf("role" to "user", "content" to message)
+                )
                 val request = mapOf("model" to model.id, "messages" to messages)
                 val json = Gson().toJson(request)
 
@@ -111,10 +155,6 @@ object AutoReplyApi {
                     AuthType.BEARER -> conn.setRequestProperty("Authorization", "Bearer $apiKey")
                     AuthType.MINIMAX -> {
                         conn.setRequestProperty("Authorization", "Bearer $apiKey")
-                        val groupId = getGroupId(context)
-                        if (groupId.isNotBlank()) {
-                            conn.setRequestProperty("GroupId", groupId)
-                        }
                     }
                 }
 
