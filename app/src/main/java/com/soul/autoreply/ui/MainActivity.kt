@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnOpenSoul.setOnClickListener {
             try {
-                val pkg = prefs.getString("soul_package", "com.soulskill.app")
+                val pkg = prefs.getString("soul_package", "com.soulskill.app") ?: "com.soulskill.app"
                 val intent = packageManager.getLaunchIntentForPackage(pkg)
                 if (intent != null) {
                     startActivity(intent)

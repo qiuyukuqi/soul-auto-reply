@@ -160,7 +160,7 @@ object AutoReplyApi {
 
                 conn.outputStream.use { os ->
                     OutputStreamWriter(os, StandardCharsets.UTF_8).use { writer ->
-                        writer.write(json)
+                        writer.append(json)
                         writer.flush()
                     }
                 }
