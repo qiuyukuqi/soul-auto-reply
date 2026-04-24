@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1a1a2e">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Title -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Soul 自动回复"
+            android:textColor="#e94560"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="开启后自动回复收到的消息"
+            android:textColor="#888"
+            android:textSize="13sp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="32dp" />
+
+        <!-- Status Card -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/statusCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            app:cardBackgroundColor="#16213e"
+            app:cardCornerRadius="12dp"
+            xmlns:app="http://schemas.android.com/apk/res-auto">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="状态"
+                    android:textColor="#e94560"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:id="@+id/tvAccessibilityStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="❌ 未开启"
+                    android:textColor="#fff"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="6dp" />
+
+                <TextView
+                    android:id="@+id/tvServiceStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⏸️ 未运行"
+                    android:textColor="#fff"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="6dp" />
+
+                <TextView
+                    android:id="@+id/tvApiKeyStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="❌ 未配置"
+                    android:textColor="#fff"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Toggle Button -->
+        <Button
+            android:id="@+id/btnToggleService"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="开启自动回复"
+            android:textColor="#fff"
+            android:textSize="16sp"
+            android:backgroundTint="#e94560"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Config -->
+        <Button
+            android:id="@+id/btnConfig"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="配置 API Key 和模型"
+            android:textColor="#fff"
+            android:textSize="14sp"
+            android:backgroundTint="#0f3460"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Test -->
+        <Button
+            android:id="@+id/btnTest"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="测试回复"
+            android:textColor="#fff"
+            android:textSize="14sp"
+            android:backgroundTint="#16213e"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Open Soul -->
+        <Button
+            android:id="@+id/btnOpenSoul"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="打开 Soul App"
+            android:textColor="#fff"
+            android:textSize="14sp"
+            android:backgroundTint="#16213e"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Accessibility Settings -->
+        <Button
+            android:id="@+id/btnAccessibility"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="无障碍权限设置"
+            android:textColor="#fff"
+            android:textSize="14sp"
+            android:backgroundTint="#16213e"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Instructions -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#16213e"
+            app:cardCornerRadius="12dp"
+            xmlns:app="http://schemas.android.com/apk/res-auto">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="使用步骤"
+                    android:textColor="#e94560"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1. 点击「配置 API」填写 Key 并选择模型\n2. 点击「开启自动回复」\n3. 在权限提示时开启「无障碍权限」\n4. 打开 Soul，正常聊天\n5. 收到消息后自动 AI 回复对方"
+                    android:textColor="#ccc"
+                    android:textSize="13sp"
+                    android:lineSpacingExtra="4dp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_bg">#e94560</color>
+    <color name="primary">#e94560</color>
+    <color name="primary_dark">#0f3460</color>
+    <color name="bg_dark">#1a1a2e</color>
+    <color name="card_bg">#16213e</color>
+</resources>

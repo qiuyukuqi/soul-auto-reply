@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.SoulAutoReply" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#e94560</item>
+        <item name="colorPrimaryVariant">#0f3460</item>
+        <item name="colorOnPrimary">#fff</item>
+        <item name="android:statusBarColor">#1a1a2e</item>
+        <item name="android:navigationBarColor">#16213e</item>
+        <item name="android:windowBackground">#1a1a2e</item>
+    </style>
+</resources>
