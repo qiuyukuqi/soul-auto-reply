@@ -2,6 +2,7 @@ package com.soul.autoreply.ui
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -17,6 +18,7 @@ import com.soul.autoreply.R
 import com.soul.autoreply.api.AutoReplyApi
 import com.soul.autoreply.databinding.ActivityMainBinding
 import com.soul.autoreply.service.MonitorService
+import com.soul.autoreply.service.SoulAccessibilityService
 
 class MainActivity : AppCompatActivity() {
 
@@ -48,6 +50,10 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnAccessibility.setOnClickListener {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
+
+        binding.btnExportDump.setOnClickListener {
+            exportUIDump()
         }
 
         binding.btnOpenSoul.setOnClickListener {
@@ -277,6 +283,41 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton("取消", null)
             .show()
+    }
+
+    private fun exportUIDump() {
+        try {
+            val files = listOf("soul_ui_dump_1.txt", "soul_ui_dump_2.txt", "soul_ui_dump_3.txt")
+            val uris = mutableListOf<Uri>()
+
+            for (name in files) {
+                try {
+                    val file = getFileStreamPath(name)
+                    if (file.exists()) {
+                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                            this,
+                            "com.soul.autoreply.fileprovider",
+                            file
+                        )
+                        uris.add(uri)
+                    }
+                } catch (e: Exception) { /* skip missing files */ }
+            }
+
+            if (uris.isEmpty()) {
+                showToast("没有找到诊断文件，请先进入Soul聊天页面后返回再试")
+                return
+            }
+
+            val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                type = "text/plain"
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(shareIntent, "分享UI诊断文件"))
+        } catch (e: Exception) {
+            showToast("导出失败: ${e.message}")
+        }
     }
 
     private fun showToast(msg: String) {

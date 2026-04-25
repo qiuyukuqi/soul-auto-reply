@@ -3,6 +3,7 @@ package com.soul.autoreply.service
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.SharedPreferences
+import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
@@ -15,15 +16,15 @@ class SoulAccessibilityService : AccessibilityService() {
             private set
         var isRunning = false
             private set
+        private const val TAG = "SoulDebug"
+        private var dumpCounter = 0
     }
 
     private lateinit var prefs: SharedPreferences
-    private var lastIncomingText = ""
-    private var lastEventTime = 0L      // 上次事件时间（真实时间）
+    private var lastEventTime = 0L
     private var isProcessingReply = false
-    private val debounceMs = 4000L
     private var processingStartTime = 0L
-    private var lastProcessedText = ""   // 上一条已处理的消息，防止重复
+    private var lastProcessedText = ""
 
     // Known Soul package names
     private val soulPackages = listOf(
@@ -31,17 +32,6 @@ class SoulAccessibilityService : AccessibilityService() {
         "com.soulgame.soul",
         "com.soulapp",
         "cn.soulapp.android"
-    )
-
-    // 备用包名列表（国内版/国际版可能不同）
-    private val allKnownSoulPackages = listOf(
-        "com.soulskill.app",
-        "com.soulgame.soul",
-        "com.soulapp",
-        "cn.soulapp.android",
-        "com.soulapp.soul",
-        "com.soul.android",
-        "com.soulgame.soulapp"
     )
 
     override fun onCreate() {
@@ -101,10 +91,73 @@ class SoulAccessibilityService : AccessibilityService() {
                 eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED ||
                 eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
 
+                // 每次窗口变化都dump界面结构（限制频率）
+                dumpUIStructure()
                 handleWindowContentChanged()
             }
         } catch (e: Exception) {
             isProcessingReply = false
+        }
+    }
+
+    /**
+     * 把当前界面完整结构dump到文件，方便分析Soul的UI层次
+     */
+    private fun dumpUIStructure() {
+        if (dumpCounter > 0) return // 只dump前3次，避免刷屏
+        dumpCounter++
+
+        val rootNode = rootInActiveWindow ?: return
+        try {
+            val sb = StringBuilder()
+            sb.append("=== Soul UI Dump #${dumpCounter} ===\n")
+            sb.append("Time: ${System.currentTimeMillis()}\n")
+            appendNodeTree(rootNode, sb, 0)
+            sb.append("\n=== Messages found ===\n")
+            val messages = findChatMessages(rootNode)
+            messages.forEach { sb.append("MSG: $it\n") }
+
+            // 写入app内部存储
+            val file = getFileStreamPath("soul_ui_dump_${dumpCounter}.txt")
+            file.writeText(sb.toString())
+
+            Log.d(TAG, "UI结构已dump到: ${file.absolutePath}")
+            showToast("UI诊断: 已保存结构到文件")
+        } catch (e: Exception) {
+            Log.e(TAG, "dump失败: ${e.message}")
+        } finally {
+            rootNode.recycle()
+        }
+    }
+
+    private fun appendNodeTree(node: AccessibilityNodeInfo, sb: StringBuilder, depth: Int) {
+        if (depth > 6) return // 限制深度避免过深
+        val indent = "  ".repeat(depth)
+
+        val text = node.text?.toString() ?: ""
+        val desc = node.contentDescription?.toString() ?: ""
+        val className = node.className?.toString() ?: ""
+        val viewId = node.viewIdResourceName ?: ""
+        val clickable = node.isClickable
+        val editable = node.isEditable
+
+        if (text.isNotBlank() || desc.isNotBlank() || viewId.isNotBlank()) {
+            sb.append("$indent[class=$className")
+            if (viewId.isNotBlank()) sb.append(", id=$viewId")
+            if (text.isNotBlank()) sb.append(", text=\"${text.take(50)}\"")
+            if (desc.isNotBlank()) sb.append(", desc=\"${desc.take(50)}\"")
+            if (clickable) sb.append(", clickable=true")
+            if (editable) sb.append(", editable=true")
+            sb.append("]\n")
+        }
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            try {
+                appendNodeTree(child, sb, depth + 1)
+            } finally {
+                child.recycle()
+            }
         }
     }
 

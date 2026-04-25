@@ -136,6 +136,17 @@
             android:textColor="#fff"
             android:textSize="14sp"
             android:backgroundTint="#16213e"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Export UI Dump -->
+        <Button
+            android:id="@+id/btnExportDump"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="导出UI诊断文件"
+            android:textColor="#fff"
+            android:textSize="14sp"
+            android:backgroundTint="#0f3460"
             android:layout_marginBottom="24dp" />
 
         <!-- Instructions -->
