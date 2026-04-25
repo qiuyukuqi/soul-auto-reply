@@ -48,30 +48,6 @@ class SoulAccessibilityService : AccessibilityService() {
         super.onCreate()
         instance = this
         prefs = getSharedPreferences("soul_reply_prefs", MODE_PRIVATE)
-        // 检测手机上实际安装的 Soul 包名，存入 SharedPreferences
-        detectAndSaveSoulPackage()
-    }
-
-    private fun detectAndSaveSoulPackage() {
-        try {
-            val pm = packageManager
-            val allPackages = pm.getInstalledApplications(0)
-            val soulApps = allPackages.filter { app ->
-                app.packageName.contains("soul", ignoreCase = true) ||
-                app.packageName.contains("soulskill", ignoreCase = true) ||
-                app.packageName.contains("soulgame", ignoreCase = true)
-            }
-            if (soulApps.isNotEmpty()) {
-                val detected = soulApps.joinToString(",") { it.packageName }
-                prefs.edit().putString("detected_soul_package", detected).apply()
-                showToast("[Soul包名] $detected")
-            } else {
-                prefs.edit().putString("detected_soul_package", "").apply()
-                showToast("[Soul包名] 未检测到Soul应用")
-            }
-        } catch (e: Exception) {
-            showToast("[Soul包名] 检测失败: ${e.message}")
-        }
     }
 
     override fun onDestroy() {

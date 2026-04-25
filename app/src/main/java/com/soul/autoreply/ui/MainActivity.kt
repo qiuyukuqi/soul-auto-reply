@@ -154,12 +154,6 @@ class MainActivity : AppCompatActivity() {
         binding.tvServiceStatus.text = if (serviceEnabled) "✅ 运行中" else "⏸️ 已停止"
         binding.tvApiKeyStatus.text = if (hasApiKey) "✅ ${model.displayName} · ${style.name}" else "❌ 未配置"
 
-        // 显示检测到的Soul包名（追加到状态行）
-        val detectedPkg = prefs.getString("detected_soul_package", null)
-        if (!detectedPkg.isNullOrEmpty()) {
-            binding.tvApiKeyStatus.text = "✅ ${model.displayName} · ${style.name}\n📦 $detectedPkg"
-        }
-
         binding.btnToggleService.text = if (serviceEnabled) "关闭自动回复" else "开启自动回复"
         binding.btnToggleService.isEnabled = accessibilityEnabled
     }
