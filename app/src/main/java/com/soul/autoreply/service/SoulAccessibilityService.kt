@@ -29,7 +29,8 @@ class SoulAccessibilityService : AccessibilityService() {
     private val soulPackages = listOf(
         "com.soulskill.app",
         "com.soulgame.soul",
-        "com.soulapp"
+        "com.soulapp",
+        "cn.soulapp.android"
     )
 
     // 备用包名列表（国内版/国际版可能不同）
@@ -37,6 +38,7 @@ class SoulAccessibilityService : AccessibilityService() {
         "com.soulskill.app",
         "com.soulgame.soul",
         "com.soulapp",
+        "cn.soulapp.android",
         "com.soulapp.soul",
         "com.soul.android",
         "com.soulgame.soulapp"
