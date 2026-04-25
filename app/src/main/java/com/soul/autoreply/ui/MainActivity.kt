@@ -52,19 +52,46 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnOpenSoul.setOnClickListener {
             try {
-                val pkg = prefs.getString("soul_package", "com.soulskill.app") ?: "com.soulskill.app"
-                val intent = packageManager.getLaunchIntentForPackage(pkg)
-                if (intent != null) {
-                    startActivity(intent)
+                // 优先用检测到的包名，其次尝试已知的Soul包名列表
+                val detectedPkg = prefs.getString("detected_soul_package", null)
+                val pkgList = if (!detectedPkg.isNullOrEmpty()) {
+                    detectedPkg.split(",").map { it.trim() }
                 } else {
-                    showToast("未找到Soul App，尝试手动打开")
-                    val webIntent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("soul://"))
-                    if (webIntent.resolveActivity(packageManager) != null) {
-                        startActivity(webIntent)
+                    listOf("cn.soulapp.android", "com.soul.autoreply", "com.soulskill.app",
+                           "com.soulgame.soul", "com.soulapp", "com.soulapp.soul")
+                }
+
+                var launched = false
+                for (pkg in pkgList) {
+                    val intent = packageManager.getLaunchIntentForPackage(pkg)
+                    if (intent != null) {
+                        startActivity(intent)
+                        launched = true
+                        break
                     }
                 }
+
+                if (!launched) {
+                    // 最后尝试兜底：打开任意包含soul的包
+                    val allApps = packageManager.getInstalledApplications(0)
+                    val soulApp = allApps.find {
+                        it.packageName.contains("soul", ignoreCase = true) &&
+                        it.packageName != "com.soul.autoreply"
+                    }
+                    if (soulApp != null) {
+                        val intent = packageManager.getLaunchIntentForPackage(soulApp.packageName)
+                        if (intent != null) {
+                            startActivity(intent)
+                            launched = true
+                        }
+                    }
+                }
+
+                if (!launched) {
+                    showToast("未找到Soul App，请确认已安装")
+                }
             } catch (e: Exception) {
-                showToast("未找到Soul App")
+                showToast("打开Soul App失败: ${e.message}")
             }
         }
 
