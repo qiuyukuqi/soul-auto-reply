@@ -32,10 +32,42 @@ class SoulAccessibilityService : AccessibilityService() {
         "com.soulapp"
     )
 
+    // 备用包名列表（国内版/国际版可能不同）
+    private val allKnownSoulPackages = listOf(
+        "com.soulskill.app",
+        "com.soulgame.soul",
+        "com.soulapp",
+        "com.soulapp.soul",
+        "com.soul.android",
+        "com.soulgame.soulapp"
+    )
+
     override fun onCreate() {
         super.onCreate()
         instance = this
         prefs = getSharedPreferences("soul_reply_prefs", MODE_PRIVATE)
+        // 检测手机上实际安装的 Soul 包名
+        detectActualSoulPackage()
+    }
+
+    private fun detectActualSoulPackage() {
+        try {
+            val pm = packageManager
+            val allPackages = pm.getInstalledApplications(0)
+            val soulApps = allPackages.filter { app ->
+                app.packageName.contains("soul", ignoreCase = true) ||
+                app.packageName.contains("soulskill", ignoreCase = true) ||
+                app.packageName.contains("soulgame", ignoreCase = true)
+            }
+            if (soulApps.isNotEmpty()) {
+                val detected = soulApps.joinToString { it.packageName }
+                showToast("[Soul包名] 检测到: $detected")
+            } else {
+                showToast("[Soul包名] 未检测到Soul应用")
+            }
+        } catch (e: Exception) {
+            showToast("[Soul包名] 检测失败: ${e.message}")
+        }
     }
 
     override fun onDestroy() {
@@ -70,7 +102,8 @@ class SoulAccessibilityService : AccessibilityService() {
 
         try {
             val packageName = event?.packageName?.toString() ?: return
-            if (!soulPackages.contains(packageName)) return
+            // 动态检测：监听所有包，在回调里判断是否是Soul
+            // if (!soulPackages.contains(packageName)) return
 
             // 修复：统一用 System.currentTimeMillis() 处理时间
             // event.eventTime 是 uptimeMillis，不能和 System.currentTimeMillis() 混用
@@ -81,8 +114,14 @@ class SoulAccessibilityService : AccessibilityService() {
             when (event.eventType) {
                 AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
                 AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
-                    showToast("[调试] 包名匹配: $packageName")
-                    handleWindowContentChanged()
+                    // 判断是否是Soul相关包名
+                    val isSoulApp = packageName.contains("soul", ignoreCase = true) ||
+                                    packageName.contains("soulskill", ignoreCase = true) ||
+                                    packageName.contains("soulgame", ignoreCase = true)
+                    if (isSoulApp) {
+                        showToast("[调试] Soul应用: $packageName")
+                        handleWindowContentChanged()
+                    }
                 }
             }
         } catch (e: Exception) {
