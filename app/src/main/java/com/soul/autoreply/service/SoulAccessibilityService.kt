@@ -19,9 +19,11 @@ class SoulAccessibilityService : AccessibilityService() {
 
     private lateinit var prefs: SharedPreferences
     private var lastIncomingText = ""
-    private var lastEventTime = 0L
+    private var lastEventTime = 0L      // 上次事件时间（真实时间）
     private var isProcessingReply = false
     private val debounceMs = 4000L
+    private var processingStartTime = 0L
+    private var lastProcessedText = ""   // 上一条已处理的消息，防止重复
 
     // Known Soul package names
     private val soulPackages = listOf(
@@ -58,47 +60,65 @@ class SoulAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        // 超时看门狗：防止 API 卡住导致 isProcessingReply 永久锁死
+        if (isProcessingReply && processingStartTime > 0 &&
+            System.currentTimeMillis() - processingStartTime > 90000) {
+            isProcessingReply = false
+            processingStartTime = 0
+        }
         if (isProcessingReply) return
 
-        val packageName = event?.packageName?.toString() ?: return
-        if (!soulPackages.contains(packageName)) return
+        try {
+            val packageName = event?.packageName?.toString() ?: return
+            if (!soulPackages.contains(packageName)) return
 
-        val eventTime = event.eventTime
-        if (eventTime - lastEventTime < 500) return  // too frequent
-        lastEventTime = eventTime
+            // 修复：统一用 System.currentTimeMillis() 处理时间
+            // event.eventTime 是 uptimeMillis，不能和 System.currentTimeMillis() 混用
+            val now = System.currentTimeMillis()
+            if (now - lastEventTime < 500) return
+            lastEventTime = now
 
-        when (event.eventType) {
-            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
-            AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
-                handleWindowContentChanged()
+            when (event.eventType) {
+                AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+                AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
+                    showToast("[调试] 包名匹配: $packageName")
+                    handleWindowContentChanged()
+                }
             }
+        } catch (e: Exception) {
+            isProcessingReply = false
         }
     }
 
     private fun handleWindowContentChanged() {
         val rootNode = rootInActiveWindow ?: return
         try {
-            // Find the chat message list and get the last message
             val chatMessages = findChatMessages(rootNode)
             if (chatMessages.isNotEmpty()) {
                 val latest = chatMessages.last()
                 val trimmed = latest.trim()
                 val now = System.currentTimeMillis()
 
+                // 调试：显示找到的消息
+                showToast("[调试] 找到消息: ${trimmed.take(20)}...")
+
                 // Only respond to genuinely new incoming messages
+                // 修复：统一用 System.currentTimeMillis()，不再混用 event.eventTime
                 if (trimmed.isNotEmpty() &&
-                    trimmed != lastIncomingText &&
+                    trimmed != lastProcessedText &&
                     trimmed.length < 1000 &&
                     (now - lastEventTime) > debounceMs) {
 
-                    lastIncomingText = trimmed
+                    lastProcessedText = trimmed
                     lastEventTime = now
 
-                    // Skip if this looks like our own message (sent by us)
                     if (!isLikelyOwnMessage(trimmed, rootNode)) {
                         triggerAutoReply(trimmed)
                     }
                 }
+            } else {
+                // 调试：无消息时也提示（方便排查）
+                // showToast("[调试] 未找到聊天消息")
             }
         } finally {
             rootNode.recycle()
@@ -182,21 +202,19 @@ class SoulAccessibilityService : AccessibilityService() {
 
     private fun triggerAutoReply(incomingMessage: String) {
         isProcessingReply = true
+        processingStartTime = System.currentTimeMillis()
         showToast("收到: $incomingMessage")
 
         AutoReplyApi.sendReply(this, incomingMessage) { reply ->
-            runOnUiThread {
+            android.os.Handler(mainLooper).post {
                 if (reply.startsWith("API错误") || reply.startsWith("网络错误") ||
                     reply == "请先配置API Key" || reply.startsWith("API错误")) {
                     showToast("自动回复失败: $reply")
                     isProcessingReply = false
                 } else {
-                    // Small delay to let the UI settle
-                    android.os.Handler(mainLooper).postDelayed({
-                        pasteAndSendReply(reply)
-                        showToast("已回复: $reply")
-                        isProcessingReply = false
-                    }, 500)
+                    pasteAndSendReply(reply)
+                    showToast("已回复: $reply")
+                    isProcessingReply = false
                 }
             }
         }
