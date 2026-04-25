@@ -106,27 +106,26 @@ class SoulAccessibilityService : AccessibilityService() {
 
         try {
             val packageName = event?.packageName?.toString() ?: return
-            // 动态检测：监听所有包，在回调里判断是否是Soul
-            // if (!soulPackages.contains(packageName)) return
+            val eventType = event.eventType
 
-            // 修复：统一用 System.currentTimeMillis() 处理时间
-            // event.eventTime 是 uptimeMillis，不能和 System.currentTimeMillis() 混用
+            // 只处理 Soul 相关包（包含soul关键词的所有包）
+            val isSoulApp = packageName.contains("soul", ignoreCase = true) ||
+                            packageName.contains("soulskill", ignoreCase = true) ||
+                            packageName.contains("soulgame", ignoreCase = true)
+            if (!isSoulApp) return
+
             val now = System.currentTimeMillis()
+
+            // 事件频率限制：500ms内的重复事件直接跳过
             if (now - lastEventTime < 500) return
             lastEventTime = now
 
-            when (event.eventType) {
-                AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
-                AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
-                    // 判断是否是Soul相关包名
-                    val isSoulApp = packageName.contains("soul", ignoreCase = true) ||
-                                    packageName.contains("soulskill", ignoreCase = true) ||
-                                    packageName.contains("soulgame", ignoreCase = true)
-                    if (isSoulApp) {
-                        showToast("[调试] Soul应用: $packageName")
-                        handleWindowContentChanged()
-                    }
-                }
+            // 监听多种事件类型，确保不漏掉
+            if (eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
+                eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED ||
+                eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+
+                handleWindowContentChanged()
             }
         } catch (e: Exception) {
             isProcessingReply = false
@@ -140,28 +139,22 @@ class SoulAccessibilityService : AccessibilityService() {
             if (chatMessages.isNotEmpty()) {
                 val latest = chatMessages.last()
                 val trimmed = latest.trim()
-                val now = System.currentTimeMillis()
 
                 // 调试：显示找到的消息
-                showToast("[调试] 找到消息: ${trimmed.take(20)}...")
+                showToast("[调试] 找到消息: ${trimmed.take(30)}")
 
-                // Only respond to genuinely new incoming messages
-                // 修复：统一用 System.currentTimeMillis()，不再混用 event.eventTime
+                // 防重复 + 字数过滤 + 内容验证
                 if (trimmed.isNotEmpty() &&
                     trimmed != lastProcessedText &&
                     trimmed.length < 1000 &&
-                    (now - lastEventTime) > debounceMs) {
+                    !trimmed.all { it.isDigit() || it == ':' || it == '-' || it == '.' || it == ' ' }) {
 
                     lastProcessedText = trimmed
-                    lastEventTime = now
 
                     if (!isLikelyOwnMessage(trimmed, rootNode)) {
                         triggerAutoReply(trimmed)
                     }
                 }
-            } else {
-                // 调试：无消息时也提示（方便排查）
-                // showToast("[调试] 未找到聊天消息")
             }
         } finally {
             rootNode.recycle()
@@ -179,29 +172,35 @@ class SoulAccessibilityService : AccessibilityService() {
     }
 
     private fun findMessageNodesDeep(node: AccessibilityNodeInfo, results: MutableList<String>, depth: Int) {
-        if (depth > 30) return  // prevent infinite recursion
+        if (depth > 40) return // prevent infinite recursion
 
         val text = node.text?.toString()?.trim() ?: ""
         val className = node.className?.toString() ?: ""
         val contentDesc = node.contentDescription?.toString()?.trim() ?: ""
         val viewId = node.viewIdResourceName ?: ""
 
-        // Skip UI chrome - keep only message content
-        val isUiChrome = isUIContainment(className, text)
-        val isShort = text.length < 3
-        val isTooLong = text.length > 2000
+        // 收集所有非空文本节点（放宽过滤条件）
+        val hasMeaningfulText = text.isNotBlank() && text.length >= 2
 
-        if (!isUiChrome && !isShort && !isTooLong && text.isNotBlank()) {
-            // Check it looks like a real message
-            if (looksLikeChatMessage(text, className)) {
+        if (hasMeaningfulText) {
+            // 跳过纯UI标签和时间戳
+            val isPureTimestamp = text.all { it.isDigit() || it == ':' || it == '-' || it == '.' }
+            val isButtonLabel = text.length < 8 && listOf("发送", "取消", "确定", "保存", "关闭", "删除", "编辑", "回复", "转发", "返回", "更多", "分享").contains(text)
+            val isInputHint = text.contains("输入") || text.contains("说说") || text.contains("这一刻") || text.contains("正在输入")
+
+            if (!isPureTimestamp && !isButtonLabel && !isInputHint) {
                 results.add(text)
             }
         }
 
+        // 递归遍历子节点
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            findMessageNodesDeep(child, results, depth + 1)
-            child.recycle()
+            try {
+                findMessageNodesDeep(child, results, depth + 1)
+            } finally {
+                child.recycle()
+            }
         }
     }
 
