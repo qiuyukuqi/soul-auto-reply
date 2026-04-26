@@ -311,7 +311,7 @@ class MainActivity : AppCompatActivity() {
 
             val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
                 type = "text/plain"
-                putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             startActivity(Intent.createChooser(shareIntent, "分享UI诊断文件"))
